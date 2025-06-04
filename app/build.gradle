@@ -15,13 +15,7 @@ buildscript {
         google()
         mavenCentral()
     }
-    dependencies {
-        classpath 'com.google.gms:google-services:4.4.2'
-        classpath 'com.google.firebase:firebase-crashlytics-gradle:3.0.3'
-    }
 }
-apply plugin: 'com.google.gms.google-services'
-apply plugin: 'com.google.firebase.crashlytics'
 //#endif
 
 android {
@@ -33,20 +27,26 @@ android {
         applicationId 'me.zhanghai.android.files'
         minSdk 21
         // Not supporting foreground service timeout yet.
-        //noinspection OldTargetApi
-        targetSdk 34
-        versionCode 39
-        versionName '1.7.4'
+        //noinspection EditedTargetSdkVersion,OldTargetApi
+        targetSdk 36
+        versionCode 40
+        versionName '1.7.5'
         resValue 'string', 'app_version', versionName + ' (' + versionCode + ')'
         buildConfigField 'String', 'FILE_PROVIDIER_AUTHORITY', 'APPLICATION_ID + ".file_provider"'
         resValue 'string', 'app_provider_authority', applicationId + '.app_provider'
         resValue 'string', 'file_provider_authority', applicationId + '.file_provider'
+        ndk{
+            //noinspection ChromeOsAbiSupport
+            abiFilters'arm64-v8a'
+        }
+        resConfigs "zh-rCN"
         externalNativeBuild {
             cmake {
                 arguments '-DANDROID_STL=none'
             }
         }
     }
+
     buildFeatures {
         aidl true
         buildConfig true
@@ -57,11 +57,11 @@ android {
     }
     compileOptions {
         coreLibraryDesugaringEnabled true
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
     }
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_1_8.toString()
+        jvmTarget = JavaVersion.VERSION_21.toString()
     }
     externalNativeBuild {
         cmake {
@@ -75,14 +75,11 @@ android {
     }
     buildTypes {
         release {
-            minifyEnabled true
-            shrinkResources true
+            minifyEnabled false
+            shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.release
-//#ifdef NONFREE
-            firebaseCrashlytics {
-                nativeSymbolUploadEnabled true
-            }
+
 //#endif
         }
     }
@@ -152,7 +149,7 @@ dependencies {
     implementation 'com.h6ah4i.android.materialshadowninepatch:materialshadowninepatch:1.0.0'
     implementation 'com.h6ah4i.android.widget.advrecyclerview:advrecyclerview:1.0.0'
     // SMBJ 0.12.0 breaks anonymous authentication: https://github.com/hierynomus/smbj/issues/792
-    //noinspection GradleDependency
+    //noinspection NewerVersionAvailable,GradleDependency
     implementation ('com.hierynomus:smbj:0.11.5') {
         // org.bouncycastle:bcprov-jdk15on uses bytecode version unsupported by Jetifier, so use
         // org.bouncycastle:bcprov-jdk15to18 instead.
@@ -180,7 +177,7 @@ dependencies {
     implementation 'commons-net:commons-net:3.11.1'
     // LicensesDialog 2.2.0 pulls in androidx.webkit and uses setForceDark() instead of correctly
     // setting colors.
-    //noinspection GradleDependency
+    //noinspection NewerVersionAvailable,GradleDependency
     implementation 'de.psdev.licensesdialog:licensesdialog:2.1.0'
     // dev.chrisbanesinsetter:insetter:0.6.0 makes inset unstable when entering immersive.
     implementation 'dev.chrisbanes:insetter-ktx:0.3.1'
@@ -213,9 +210,5 @@ dependencies {
     // Also a dependency of jCIFS-NG.
     implementation 'org.slf4j:slf4j-android:1.7.36'
 
-//#ifdef NONFREE
-    implementation platform('com.google.firebase:firebase-bom:33.14.0')
-    implementation 'com.google.firebase:firebase-analytics'
-    implementation 'com.google.firebase:firebase-crashlytics-ndk'
 //#endif
 }
