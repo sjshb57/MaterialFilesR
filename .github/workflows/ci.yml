@@ -51,3 +51,19 @@ jobs:
           path: app/build/outputs/apk/release/*.apk
           retention-days: 30
 
+  # 可选：发布到 GitHub Releases
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+    steps:
+      - name: Download Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: release-apk
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ github.run_number }}
+          files: app/build/outputs/apk/release/*.apk
