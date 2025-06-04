@@ -1,49 +1,53 @@
-name: CI Build and Release
+name: Android CI & Release
 
 on:
   push:
-    branches: [ master ]  # 触发分支（根据你的实际分支名调整）
+    branches: [ master ]
   pull_request:
     branches: [ master ]
 
 jobs:
   build:
-    runs-on: ubuntu-latest  # 使用 GitHub 提供的 Ubuntu 虚拟机
-
+    runs-on: ubuntu-latest
     steps:
+      # 1. 拉取代码
       - name: Checkout code
-        uses: actions/checkout@v4  # 拉取代码
+        uses: actions/checkout@v4
 
-      - name: Set up JDK (Java 示例)
+      # 2. 设置 JDK 21 (Temurin)
+      - name: Set up JDK 21
         uses: actions/setup-java@v3
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: 'temurin'
 
-      - name: Build with Gradle (Android 示例)
-        run: ./gradlew assembleRelease  # 替换为你的编译命令
+      # 3. 生成 keystore 文件并注入签名信息
+      - name: Setup signing
+        env:
+          STORE_FILE_BASE64: ${{ secrets.STORE_FILE_BASE64 }}  # Base64 编码的 keystore
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          # 将 Base64 解码为 keystore 文件（放在项目根目录）
+          echo "$STORE_FILE_BASE64" | base64 -d > keystore.jks
+          # 验证文件是否生成成功
+          ls -la keystore.jks
 
+      # 4. 构建 Release APK
+      - name: Build Release APK
+        run: ./gradlew assembleRelease
+
+      # 5. 验证 APK 是否已签名
+      - name: Verify APK Signature
+        run: |
+          jarsigner -verify -verbose -certs app/build/outputs/apk/release/*.apk
+
+      # 6. 上传 APK 产物
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: release-build
-          path: app/release/  # 替换为你的产物路径
-          retention-days: 30  # 临时保留时间
+          name: release-apk
+          path: app/build/outputs/apk/release/*.apk
+          retention-days: 30
 
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master'  # 仅 main 分支触发发布
-
-    steps:
-      - name: Download Artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: release-build
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ci-${{ github.run_number }}  # 自动生成标签（如 ci-123）
-          files: |
-            app/build/release/*.apk  # 上传的产物文件
