@@ -1,4 +1,4 @@
-name: Android CI & Release
+name: Android CI (Release + Debug)
 
 on:
   push:
@@ -10,60 +10,30 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # 1. 拉取代码
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # 2. 设置 JDK 21 (Temurin)
       - name: Set up JDK 21
         uses: actions/setup-java@v3
         with:
           java-version: '21'
           distribution: 'temurin'
 
-      # 3. 生成 keystore 文件并注入签名信息
-      - name: Setup signing
-        env:
-          STORE_FILE_BASE64: ${{ secrets.STORE_FILE_BASE64 }}  # Base64 编码的 keystore
-          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: |
-          # 将 Base64 解码为 keystore 文件（放在项目根目录）
-          echo "$STORE_FILE_BASE64" | base64 -d > keystore.jks
-          # 验证文件是否生成成功
-          ls -la keystore.jks
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug
 
-      # 4. 构建 Release APK
       - name: Build Release APK
         run: ./gradlew assembleRelease
 
-      # 5. 验证 APK 是否已签名
-      - name: Verify APK Signature
-        run: |
-          jarsigner -verify -verbose -certs app/build/outputs/apk/release/*.apk
-
-      # 6. 上传 APK 产物
-      - name: Upload Artifact
+      - name: Upload Debug APK
         uses: actions/upload-artifact@v3
         with:
-          name: release-apk
-          path: app/build/outputs/apk/release/*.apk
+          name: app-debug
+          path: app/build/outputs/apk/debug/*.apk
           retention-days: 30
 
-  # 可选：发布到 GitHub Releases
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master'
-    steps:
-      - name: Download Artifact
-        uses: actions/download-artifact@v3
+      - name: Upload Release APK
+        uses: actions/upload-artifact@v3
         with:
-          name: release-apk
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: v${{ github.run_number }}
-          files: app/build/outputs/apk/release/*.apk
+          name: app-release
+          path: app/build/outputs/apk/release/*.apk
+          retention-days: 30
