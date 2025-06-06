@@ -1,3 +1,5 @@
+import java.util.Properties
+
 android {
     signingConfigs {
         release {
@@ -7,15 +9,51 @@ android {
                 properties = new Properties()
                 properties.load(propertiesFile.newDataInputStream())
             }
+
             def getString = { String propertyName, String environmentName, String prompt ->
+                // 尝试从 properties 文件获取，如果不存在则从环境变量获取，再不存在则尝试控制台输入
                 return properties?.get(propertyName) ?: System.getenv(environmentName) ?:
                         System.console()?.readLine('\n' + prompt + ': ')
             }
 
-            storeFile getString('storeFile', 'STORE_FILE', 'Store file')?.with(rootProject.&file)
-            storePassword getString('storePassword', 'STORE_PASSWORD', 'Store password')
-            keyAlias getString('keyAlias', 'KEY_ALIAS', 'Key alias')
-            keyPassword getString('keyPassword', 'KEY_PASSWORD', 'Key password')
+            // 定义临时密钥库文件的路径
+            // 这个文件将在 CI/CD 环境中通过 Base64 解码生成
+            def tempKeystoreFile = file("${rootProject.projectDir}/temp_keystore_release.jks")
+
+            // 优先从环境变量 STORE_FILE_BASE64 获取 Base64 编码的密钥库内容
+            // 这是一个专门为 CI/CD 环境设计的逻辑，避免直接将密钥库文件提交到仓库
+            if (System.getenv("STORE_FILE_BASE64") != null) {
+                def keystoreBase64 = System.getenv("STORE_FILE_BASE64")
+                byte[] decodedBytes = keystoreBase64.decodeBase64() // Groovy 的 String 扩展方法
+                tempKeystoreFile.writeBytes(decodedBytes) // 将解码后的字节写入临时文件
+
+                // 使用临时文件作为 storeFile
+                storeFile tempKeystoreFile
+                // 从环境变量获取密码和别名
+                storePassword System.getenv("STORE_PASSWORD")
+                keyAlias System.getenv("KEY_ALIAS")
+                keyPassword System.getenv("KEY_PASSWORD")
+            } else {
+                // 如果没有 STORE_FILE_BASE64 环境变量，则回退到原来的逻辑：
+                // 1. 从 signing.properties 文件读取 (本地开发常用)
+                // 2. 从环境变量 STORE_FILE (旧的或者备用环境变量名)
+                // 3. 尝试交互式输入 (CI/CD 环境会失败，因为没有控制台)
+
+                def storeFileFromPropsOrEnv = getString('storeFile', 'STORE_FILE', 'Store file')
+                if (storeFileFromPropsOrEnv != null) {
+                    storeFile storeFileFromPropsOrEnv.with(rootProject.&file)
+                } else {
+                    // 在 CI/CD 环境中，如果走到这里，说明配置缺失，需要抛出明确的错误
+                    // 这有助于诊断问题，因为 System.console()?.readLine 会返回 null 导致后续签名失败
+                    throw new GradleException("Release signing configuration is incomplete. " +
+                                              "Please provide STORE_FILE_BASE64, STORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD " +
+                                              "as environment variables (e.g., GitHub Secrets) or create a 'signing.properties' file.")
+                }
+                // 继续使用原来的 getString 逻辑获取密码和别名
+                storePassword getString('storePassword', 'STORE_PASSWORD', 'Store password')
+                keyAlias getString('keyAlias', 'KEY_ALIAS', 'Key alias')
+                keyPassword getString('keyPassword', 'KEY_PASSWORD', 'Key password')
+            }
         }
     }
 }
