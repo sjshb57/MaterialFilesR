@@ -16,28 +16,51 @@ android {
             }
 
             def tempKeystoreFile = file("${rootProject.projectDir}/temp_keystore_release.jks")
+            
+            try {
+                // 优先处理BASE64编码的密钥
+                def keystoreBase64 = System.getenv("STORE_FILE_BASE64")?.trim()
+                if (keystoreBase64) {
+                    println "Using BASE64 encoded keystore from environment variables"
+                    
+                    // 安全写入临时文件
+                    tempKeystoreFile.withOutputStream { os ->
+                        os.write(keystoreBase64.decodeBase64())
+                    }
 
-            if (System.getenv("STORE_FILE_BASE64") != null) {
-                def keystoreBase64 = System.getenv("STORE_FILE_BASE64")
-                byte[] decodedBytes = keystoreBase64.decodeBase64()
-                tempKeystoreFile.writeBytes(decodedBytes)
-
-                storeFile tempKeystoreFile
-                storePassword System.getenv("STORE_PASSWORD")
-                keyAlias System.getenv("KEY_ALIAS")
-                keyPassword System.getenv("KEY_PASSWORD")
-            } else {
-                def storeFileFromPropsOrEnv = getString('storeFile', 'STORE_FILE', 'Store file')
-                if (storeFileFromPropsOrEnv != null) {
-                    storeFile storeFileFromPropsOrEnv.with(rootProject.&file)
-                } else {
-                    throw new GradleException("Release signing configuration is incomplete. " +
-                                              "Please provide STORE_FILE_BASE64, STORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD " +
-                                              "as environment variables (e.g., GitHub Secrets) or create a 'signing.properties' file.")
+                    storeFile tempKeystoreFile
+                    storePassword System.getenv("STORE_PASSWORD") ?: ""
+                    keyAlias System.getenv("KEY_ALIAS") ?: ""
+                    keyPassword System.getenv("KEY_PASSWORD") ?: ""
+                    
+                    // 设置任务结束后自动清理临时文件
+                    gradle.buildFinished {
+                        tempKeystoreFile.delete()
+                    }
+                } 
+                // 回退到properties文件或环境变量
+                else {
+                    println "Falling back to signing.properties or individual env vars"
+                    def storeFileFromPropsOrEnv = getString('storeFile', 'STORE_FILE', 'Store file')
+                    if (storeFileFromPropsOrEnv != null) {
+                        storeFile file(storeFileFromPropsOrEnv)
+                    } else {
+                        throw new GradleException("""
+                            Release signing configuration is incomplete. 
+                            Required either:
+                            1. STORE_FILE_BASE64 + STORE_PASSWORD + KEY_ALIAS + KEY_PASSWORD as env vars, OR
+                            2. signing.properties file with:
+                               storeFile, storePassword, keyAlias, keyPassword
+                            """.stripIndent())
+                    }
+                    storePassword getString('storePassword', 'STORE_PASSWORD', 'Store password')
+                    keyAlias getString('keyAlias', 'KEY_ALIAS', 'Key alias')
+                    keyPassword getString('keyPassword', 'KEY_PASSWORD', 'Key password')
                 }
-                storePassword getString('storePassword', 'STORE_PASSWORD', 'Store password')
-                keyAlias getString('keyAlias', 'KEY_ALIAS', 'Key alias')
-                keyPassword getString('keyPassword', 'KEY_PASSWORD', 'Key password')
+            } catch (Exception e) {
+                // 清理可能存在的临时文件
+                tempKeystoreFile.delete()
+                throw e
             }
         }
     }
