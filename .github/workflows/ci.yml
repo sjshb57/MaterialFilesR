@@ -24,30 +24,45 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Debug Env Variables
+      - name: Validate Environment
         run: |
-          echo "STORE_FILE_BASE64 length: ${#STORE_FILE_BASE64}"
-          echo "STORE_PASSWORD exists: ${! -z $STORE_PASSWORD}"
-          echo "KEY_ALIAS exists: ${! -z $KEY_ALIAS}"
-          echo "KEY_PASSWORD exists: ${! -z $KEY_PASSWORD}"
+          # 安全检查环境变量
+          echo "STORE_FILE_BASE64 前10字符: ${STORE_FILE_BASE64:0:10}..."
+          echo "STORE_FILE_BASE64 长度: ${#STORE_FILE_BASE64}"
+          echo "STORE_PASSWORD 是否设置: $([ -z "$STORE_PASSWORD" ] && echo "NO" || echo "YES")"
+          echo "KEY_ALIAS 是否设置: $([ -z "$KEY_ALIAS" ] && echo "NO" || echo "YES")"
+          echo "KEY_PASSWORD 是否设置: $([ -z "$KEY_PASSWORD" ] && echo "NO" || echo "YES")"
+
+          # 验证Base64解码能力
+          if [ -n "$STORE_FILE_BASE64" ]; then
+            echo $STORE_FILE_BASE64 | base64 -d > /dev/null
+            if [ $? -eq 0 ]; then
+              echo "✓ STORE_FILE_BASE64 可正常解码"
+            else
+              echo "✗ STORE_FILE_BASE64 解码失败！"
+              exit 1
+            fi
+          fi
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug
-
-      - name: Build Release APK
-        run: ./gradlew assembleRelease --stacktrace
-        env:
-          # 这里重复定义确保子进程能继承（某些Gradle版本的已知问题）
-          STORE_FILE_BASE64: ${{ secrets.STORE_FILE_BASE64 }}
-          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      - name: Build with Gradle
+        run: |
+          ./gradlew assembleDebug --stacktrace
+          
+          # 仅在所有必需变量都存在时构建release
+          if [ -n "$STORE_FILE_BASE64" ] && \
+             [ -n "$STORE_PASSWORD" ] && \
+             [ -n "$KEY_ALIAS" ] && \
+             [ -n "$KEY_PASSWORD" ]; then
+            echo "所有签名变量已设置，开始构建Release..."
+            ./gradlew assembleRelease --stacktrace
+          else
+            echo "缺少签名配置，跳过Release构建"
+          fi
 
       - name: Upload Debug APK
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
@@ -55,13 +70,15 @@ jobs:
           retention-days: 30
 
       - name: Upload Release APK
-        if: always()
+        if: success() && env.STORE_FILE_BASE64 != ''
         uses: actions/upload-artifact@v4
         with:
           name: app-release
           path: app/build/outputs/apk/release/app-release.apk
           retention-days: 30
 
-      - name: Clean up keystore
+      - name: Clean up
         run: |
+          # 清理可能的临时文件
           rm -f temp_keystore_release.jks || true
+          echo "清理完成"
