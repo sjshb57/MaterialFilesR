@@ -9,6 +9,11 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      STORE_FILE_BASE64: ${{ secrets.STORE_FILE_BASE64 }}
+      STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
     steps:
       - uses: actions/checkout@v4
@@ -18,7 +23,13 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
-         # cache: gradle
+
+      - name: Debug Env Variables
+        run: |
+          echo "STORE_FILE_BASE64 length: ${#STORE_FILE_BASE64}"
+          echo "STORE_PASSWORD exists: ${! -z $STORE_PASSWORD}"
+          echo "KEY_ALIAS exists: ${! -z $KEY_ALIAS}"
+          echo "KEY_PASSWORD exists: ${! -z $KEY_PASSWORD}"
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
@@ -27,14 +38,16 @@ jobs:
         run: ./gradlew assembleDebug
 
       - name: Build Release APK
-        run: ./gradlew assembleRelease
+        run: ./gradlew assembleRelease --stacktrace
         env:
+          # 这里重复定义确保子进程能继承（某些Gradle版本的已知问题）
           STORE_FILE_BASE64: ${{ secrets.STORE_FILE_BASE64 }}
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
       - name: Upload Debug APK
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
@@ -42,8 +55,13 @@ jobs:
           retention-days: 30
 
       - name: Upload Release APK
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: app-release
           path: app/build/outputs/apk/release/app-release.apk
           retention-days: 30
+
+      - name: Clean up keystore
+        run: |
+          rm -f temp_keystore_release.jks || true
