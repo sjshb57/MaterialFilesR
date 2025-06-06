@@ -1,5 +1,5 @@
 import java.util.Properties
-import java.io.FileInputStream // 导入 FileInputStream
+import java.io.FileInputStream
 
 android {
     signingConfigs {
