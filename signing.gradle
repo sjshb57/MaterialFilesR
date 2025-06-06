@@ -3,65 +3,103 @@ import java.util.Properties
 android {
     signingConfigs {
         release {
-            def properties
+            println "\n=== 开始初始化签名配置 ==="
+            
+            // 1. 检查环境变量和properties文件
+            def properties = [:]
             def propertiesFile = rootProject.file('signing.properties')
             if (propertiesFile.exists()) {
-                properties = new Properties()
-                properties.load(propertiesFile.newDataInputStream())
+                println "发现 signing.properties 文件"
+                propertiesFile.withInputStream { stream ->
+                    properties.load(stream)
+                }
+            } else {
+                println "未找到 signing.properties 文件"
             }
 
-            def getString = { String propertyName, String environmentName, String prompt ->
-                return properties?.get(propertyName) ?: System.getenv(environmentName) ?:
-                        System.console()?.readLine('\n' + prompt + ': ')
-            }
+            // 调试输出当前配置来源
+            println "| 配置来源检查:"
+            println "| STORE_FILE_BASE64: ${System.getenv('STORE_FILE_BASE64')?.take(10)}... (长度: ${System.getenv('STORE_FILE_BASE64')?.length() ?: '未设置'})"
+            println "| STORE_PASSWORD: ${System.getenv('STORE_PASSWORD') ? '*** (已设置)' : '未设置'}"
+            println "| KEY_ALIAS: ${System.getenv('KEY_ALIAS') ? '*** (已设置)' : '未设置'}"
+            println "| KEY_PASSWORD: ${System.getenv('KEY_PASSWORD') ? '*** (已设置)' : '未设置'}"
 
-            def tempKeystoreFile = file("${rootProject.projectDir}/temp_keystore_release.jks")
-            
-            try {
-                // 优先处理BASE64编码的密钥
-                def keystoreBase64 = System.getenv("STORE_FILE_BASE64")?.trim()
-                if (keystoreBase64) {
-                    println "Using BASE64 encoded keystore from environment variables"
-                    
+            // 2. 优先处理BASE64编码的密钥
+            def keystoreBase64 = System.getenv("STORE_FILE_BASE64")?.trim()
+            if (keystoreBase64) {
+                println "\n🔑 正在使用BASE64环境变量配置..."
+                
+                def tempKeystoreFile = file("${rootProject.projectDir}/temp_keystore.jks")
+                try {
                     // 安全写入临时文件
                     tempKeystoreFile.withOutputStream { os ->
-                        os.write(keystoreBase64.decodeBase64())
+                        def decodedBytes = keystoreBase64.decodeBase64()
+                        if (!decodedBytes) {
+                            throw new GradleException("BASE64解码失败！请检查STORE_FILE_BASE64内容")
+                        }
+                        os.write(decodedBytes)
+                        println "| 临时密钥文件写入成功 (${decodedBytes.length} bytes)"
+                    }
+
+                    // 验证密钥文件有效性
+                    if (!tempKeystoreFile.exists() || tempKeystoreFile.length() == 0) {
+                        throw new GradleException("临时密钥文件创建失败！")
                     }
 
                     storeFile tempKeystoreFile
                     storePassword System.getenv("STORE_PASSWORD") ?: ""
                     keyAlias System.getenv("KEY_ALIAS") ?: ""
                     keyPassword System.getenv("KEY_PASSWORD") ?: ""
-                    
-                    // 设置任务结束后自动清理临时文件
+
+                    println "| 签名配置已应用"
+                    println "| storeFile: ${storeFile?.absolutePath}"
+                    println "| keyAlias: ${keyAlias?.take(1)}***"
+
+                    // 构建完成后自动清理
                     gradle.buildFinished {
+                        if (tempKeystoreFile.exists()) {
+                            tempKeystoreFile.delete()
+                            println "| 已清理临时密钥文件"
+                        }
+                    }
+                } catch (Exception e) {
+                    if (tempKeystoreFile.exists()) {
                         tempKeystoreFile.delete()
                     }
-                } 
-                // 回退到properties文件或环境变量
-                else {
-                    println "Falling back to signing.properties or individual env vars"
-                    def storeFileFromPropsOrEnv = getString('storeFile', 'STORE_FILE', 'Store file')
-                    if (storeFileFromPropsOrEnv != null) {
-                        storeFile file(storeFileFromPropsOrEnv)
-                    } else {
-                        throw new GradleException("""
-                            Release signing configuration is incomplete. 
-                            Required either:
-                            1. STORE_FILE_BASE64 + STORE_PASSWORD + KEY_ALIAS + KEY_PASSWORD as env vars, OR
-                            2. signing.properties file with:
-                               storeFile, storePassword, keyAlias, keyPassword
-                            """.stripIndent())
-                    }
-                    storePassword getString('storePassword', 'STORE_PASSWORD', 'Store password')
-                    keyAlias getString('keyAlias', 'KEY_ALIAS', 'Key alias')
-                    keyPassword getString('keyPassword', 'KEY_PASSWORD', 'Key password')
+                    throw new GradleException("签名配置失败: ${e.message}", e)
                 }
-            } catch (Exception e) {
-                // 清理可能存在的临时文件
-                tempKeystoreFile.delete()
-                throw e
             }
+            // 3. 回退到properties文件/单独环境变量
+            else {
+                println "\n📁 尝试使用properties文件/单独环境变量配置..."
+                
+                def getConfigValue = { String name, String envName ->
+                    return properties[name] ?: System.getenv(envName)
+                }
+
+                def storeFileValue = getConfigValue('storeFile', 'STORE_FILE')
+                if (storeFileValue) {
+                    storeFile file(storeFileValue)
+                    storePassword getConfigValue('storePassword', 'STORE_PASSWORD') ?: ""
+                    keyAlias getConfigValue('keyAlias', 'KEY_ALIAS') ?: ""
+                    keyPassword getConfigValue('keyPassword', 'KEY_PASSWORD') ?: ""
+
+                    println "| 使用文件路径配置:"
+                    println "| storeFile: ${storeFile?.absolutePath}"
+                    println "| keyAlias: ${keyAlias?.take(1)}***"
+                } else {
+                    println "⚠️ 未配置任何有效的签名信息"
+                    // 不抛出异常，允许无签名构建
+                }
+            }
+        }
+    }
+
+    // 应用签名配置到release构建
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            println "Release构建将使用: ${signingConfig?.name ?: '无签名配置'}\n"
         }
     }
 }
