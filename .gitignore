@@ -8,4 +8,4 @@
 /signing.properties
 .DS_Store
 *.iml
-app/release/
+/app/release
