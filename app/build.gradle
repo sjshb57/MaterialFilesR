@@ -22,10 +22,10 @@ android {
     namespace 'me.zhanghai.android.files'
     buildToolsVersion = '36.0.0'
     compileSdk 36
-    ndkVersion '28.1.13356709'
+    ndkVersion '28.2.13676358'
     defaultConfig {
         applicationId 'me.zhanghai.android.files'
-        minSdk 21
+        minSdk 23
         // Not supporting foreground service timeout yet.
         //noinspection EditedTargetSdkVersion,OldTargetApi
         targetSdk 36
@@ -39,7 +39,7 @@ android {
             //noinspection ChromeOsAbiSupport
             abiFilters'arm64-v8a'
         }
-        resConfigs "zh-rCN"
+        resourceConfigurations += ['zh-rCN']
         externalNativeBuild {
             cmake {
                 arguments '-DANDROID_STL=none'
@@ -99,6 +99,12 @@ android {
             enableSplit = false
         }
     }
+    sourceSets {
+        main {
+            aidl.srcDirs = ['src/main/aidl', 'src/main/java']
+            java.srcDirs = ['src/main/java', 'build/generated/aidl_source_output_dir']
+        }
+    }
 }
 
 repositories {
@@ -112,7 +118,7 @@ dependencies {
         exclude group: 'org.ogce', module: 'xpp3'
     }
     implementation 'com.github.chrisbanes:PhotoView:2.3.0'
-    implementation 'com.github.topjohnwu.libsu:service:5.2.2'
+    implementation 'com.github.topjohnwu.libsu:service:6.0.0'
 }
 
 dependencies {
@@ -126,13 +132,13 @@ dependencies {
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$kotlinx_coroutines_version"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coroutines_version"
 
-    implementation 'androidx.activity:activity-ktx:1.10.1'
+    implementation 'androidx.activity:activity-ktx:1.12.3'
     implementation 'androidx.appcompat:appcompat:1.7.1'
-    implementation 'androidx.core:core-ktx:1.16.0'
+    implementation 'androidx.core:core-ktx:1.17.0'
     implementation 'androidx.drawerlayout:drawerlayout:1.2.0'
-    implementation 'androidx.exifinterface:exifinterface:1.4.1'
-    implementation 'androidx.fragment:fragment-ktx:1.8.8'
-    def androidx_lifecycle_version = '2.9.2'
+    implementation 'androidx.exifinterface:exifinterface:1.4.2'
+    implementation 'androidx.fragment:fragment-ktx:1.8.9'
+    def androidx_lifecycle_version = '2.10.0'
     implementation "androidx.lifecycle:lifecycle-common-java8:$androidx_lifecycle_version"
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:$androidx_lifecycle_version"
     implementation "androidx.lifecycle:lifecycle-process:$androidx_lifecycle_version"
@@ -140,7 +146,7 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$androidx_lifecycle_version"
     implementation 'androidx.preference:preference-ktx:1.2.1'
     implementation 'androidx.recyclerview:recyclerview:1.4.0'
-    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.2.0'
     implementation 'com.google.android.material:material:1.12.0'
 
     implementation 'com.caverock:androidsvg-aar:1.4'
@@ -155,7 +161,7 @@ dependencies {
         // org.bouncycastle:bcprov-jdk15to18 instead.
         exclude group: 'org.bouncycastle', module: 'bcprov-jdk15on'
     }
-    def bouncy_castle_version = '1.81'
+    def bouncy_castle_version = '1.83'
     implementation "org.bouncycastle:bcprov-jdk15to18:$bouncy_castle_version"
     implementation ('com.hierynomus:sshj:0.40.0') {
         exclude group: 'org.bouncycastle', module: 'bcprov-jdk18on'
@@ -170,11 +176,11 @@ dependencies {
         exclude group: 'com.hierynomus', module: 'smbj'
         exclude group: 'org.bouncycastle', module: 'bcprov-jdk18on'
     }
-    implementation 'com.google.guava:guava:33.4.8-android'
+    implementation 'com.google.guava:guava:33.5.0-android'
     // Guava conflicts with com.google.guava:listenablefuture:1.0 pulled in by AndroidX Core
     implementation 'com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava'
     implementation 'com.takisoft.preferencex:preferencex:1.1.0'
-    implementation 'commons-net:commons-net:3.11.1'
+    implementation 'commons-net:commons-net:3.12.0'
     // LicensesDialog 2.2.0 pulls in androidx.webkit and uses setForceDark() instead of correctly
     // setting colors.
     //noinspection NewerVersionAvailable,GradleDependency

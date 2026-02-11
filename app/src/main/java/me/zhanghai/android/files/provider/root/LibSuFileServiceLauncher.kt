@@ -66,7 +66,7 @@ object LibSuFileServiceLauncher {
                             // handle errors during shell creation.
                             suspendCancellableCoroutine<Unit> { continuation ->
                                 // Shell.getShell(GetShellCallback) doesn't allow handling errors.
-                                Shell.EXECUTOR.submit {
+                                Shell.cmd("true").submit {
                                     try {
                                         Shell.getShell()
                                         continuation.resume(Unit)
