@@ -34,7 +34,7 @@
 
     <!-- Shizuku requires API 23. -->
     <uses-sdk tools:overrideLibrary="rikka.shizuku.aidl,rikka.shizuku.api,rikka.shizuku.shared" />
-  
+
     <!--
       ~ Samsung DeX requires explicitly setting android:resizeableActivity="true" for the app to be
       ~ resizable.
