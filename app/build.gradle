@@ -21,7 +21,7 @@ android {
     namespace 'me.zhanghai.android.files'
     buildToolsVersion = '37.0.0'
     compileSdk = 37
-    ndkVersion '28.1.13356709'
+    ndkVersion '28.2.13676358'
     defaultConfig {
         applicationId 'me.zhanghai.android.files'
         minSdk 23
