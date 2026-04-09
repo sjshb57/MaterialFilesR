@@ -56,13 +56,13 @@ android {
         generateLocaleConfig true
     }
     compileOptions {
-        coreLibraryDesugaringEnabled true
-        sourceCompatibility JavaVersion.VERSION_21
-        targetCompatibility JavaVersion.VERSION_21
-    }
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_21.toString()
-    }
+    coreLibraryDesugaringEnabled true
+    sourceCompatibility JavaVersion.VERSION_21
+    targetCompatibility JavaVersion.VERSION_21
+}
+    kotlin {
+    jvmToolchain(21)
+}
     externalNativeBuild {
         cmake {
             path 'CMakeLists.txt'
