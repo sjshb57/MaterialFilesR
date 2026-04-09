@@ -56,12 +56,12 @@ android {
         generateLocaleConfig true
     }
     compileOptions {
-    coreLibraryDesugaringEnabled true
-    sourceCompatibility JavaVersion.VERSION_21
-    targetCompatibility JavaVersion.VERSION_21
+        coreLibraryDesugaringEnabled true
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
 }
     kotlin {
-    jvmToolchain(21)
+        jvmToolchain(21)
 }
     externalNativeBuild {
         cmake {
