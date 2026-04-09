@@ -827,7 +827,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
             }
             var flags =
                 Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+                    Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
             if (!pickOptions.readOnly) {
                 flags = flags or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
             }

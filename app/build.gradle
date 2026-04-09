@@ -4,7 +4,6 @@
  */
 
 apply plugin: 'com.android.application'
-apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-parcelize'
 
 apply from: '../signing.gradle'
@@ -20,9 +19,9 @@ buildscript {
 
 android {
     namespace 'me.zhanghai.android.files'
-    buildToolsVersion = '36.0.0'
-    compileSdk 36
-    ndkVersion '28.2.13676358'
+    buildToolsVersion = '37.0.0'
+    compileSdk = 37
+    ndkVersion '28.1.13356709'
     defaultConfig {
         applicationId 'me.zhanghai.android.files'
         minSdk 23
@@ -50,6 +49,7 @@ android {
     buildFeatures {
         aidl true
         buildConfig true
+        resValues true
         viewBinding true
     }
     androidResources {
@@ -112,7 +112,7 @@ repositories {
 }
 dependencies {
     // We need https://github.com/bitfireAT/dav4jvm/commit/c1bc14348831bcdb00f3a6eec4859b81c7dc3728
-    implementation('com.github.bitfireAT:dav4jvm:ec6264d427') {
+    implementation('com.github.bitfireAT:dav4jvm:02fe1a95e6') {
         exclude group: 'org.ogce', module: 'xpp3'
     }
     implementation 'com.github.chrisbanes:PhotoView:2.3.0'
@@ -130,9 +130,9 @@ dependencies {
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$kotlinx_coroutines_version"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coroutines_version"
 
-    implementation 'androidx.activity:activity-ktx:1.12.3'
+    implementation 'androidx.activity:activity-ktx:1.13.0'
     implementation 'androidx.appcompat:appcompat:1.7.1'
-    implementation 'androidx.core:core-ktx:1.17.0'
+    implementation 'androidx.core:core-ktx:1.18.0'
     implementation 'androidx.drawerlayout:drawerlayout:1.2.0'
     implementation 'androidx.exifinterface:exifinterface:1.4.2'
     implementation 'androidx.fragment:fragment-ktx:1.8.9'
@@ -145,15 +145,17 @@ dependencies {
     implementation 'androidx.preference:preference-ktx:1.2.1'
     implementation 'androidx.recyclerview:recyclerview:1.4.0'
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.2.0'
-    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'com.google.android.material:material:1.13.0'
 
     implementation 'com.caverock:androidsvg-aar:1.4'
     implementation 'com.davemorrissey.labs:subsampling-scale-image-view-androidx:3.10.0'
     implementation 'com.drakeet.drawer:drawer:1.0.3'
     implementation 'com.h6ah4i.android.materialshadowninepatch:materialshadowninepatch:1.0.0'
     implementation 'com.h6ah4i.android.widget.advrecyclerview:advrecyclerview:1.0.0'
-    // SMBJ 0.12.0 breaks anonymous authentication: https://github.com/hierynomus/smbj/issues/792
-    //noinspection NewerVersionAvailable,GradleDependency
+    // SMBJ 0.12.0 broke anonymous authentication: https://github.com/hierynomus/smbj/issues/792 ,
+    // and it's still an issue in 0.14.0 according to
+    // https://github.com/hierynomus/smbj/issues/792#issuecomment-2548018378 .
+    //noinspection NewerVersionAvailable
     implementation ('com.hierynomus:smbj:0.11.5') {
         // org.bouncycastle:bcprov-jdk15on uses bytecode version unsupported by Jetifier, so use
         // org.bouncycastle:bcprov-jdk15to18 instead.
@@ -178,11 +180,11 @@ dependencies {
     // Guava conflicts with com.google.guava:listenablefuture:1.0 pulled in by AndroidX Core
     implementation 'com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava'
     implementation 'com.takisoft.preferencex:preferencex:1.1.0'
-    implementation 'commons-net:commons-net:3.12.0'
+    implementation 'commons-net:commons-net:3.13.0'
     // LicensesDialog 2.2.0 pulls in androidx.webkit and uses setForceDark() instead of correctly
     // setting colors.
-    //noinspection NewerVersionAvailable,GradleDependency
-    implementation 'de.psdev.licensesdialog:licensesdialog:2.2.0'
+    //noinspection NewerVersionAvailable
+    implementation 'de.psdev.licensesdialog:licensesdialog:2.1.0'
     // dev.chrisbanesinsetter:insetter:0.6.0 makes inset unstable when entering immersive.
     implementation 'dev.chrisbanes:insetter-ktx:0.3.1'
     implementation 'dev.rikka.rikkax.preference:simplemenu-preference:1.0.3'
